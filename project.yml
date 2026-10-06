@@ -25,3 +25,19 @@ targets:
         PRODUCT_BUNDLE_IDENTIFIER: com.solmomma.snapsol
         ENABLE_HARDENED_RUNTIME: true
         ENABLE_APP_SANDBOX: false
+    scheme:
+      testTargets: [SnapsolTests]
+  # アプリを起動しない非ホスト型テスト。Presentation / App を含めないことで、
+  # 下位層が UI に依存したらコンパイルエラーになる（層の境界をコンパイラで強制）
+  SnapsolTests:
+    type: bundle.unit-test
+    platform: macOS
+    sources:
+      - SnapsolTests
+      - Snapsol/Domain
+      - Snapsol/Application
+      - Snapsol/Infrastructure
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.solmomma.snapsol.tests
+        GENERATE_INFOPLIST_FILE: true
