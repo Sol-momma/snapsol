@@ -1,0 +1,27 @@
+name: Snapsol
+options:
+  bundleIdPrefix: com.solmomma
+  deploymentTarget:
+    macOS: "26.0"
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+    SWIFT_STRICT_CONCURRENCY: complete
+    DEVELOPMENT_TEAM: TGH9CKLLPU
+    CODE_SIGN_STYLE: Automatic
+targets:
+  Snapsol:
+    type: application
+    platform: macOS
+    sources: [Snapsol]
+    info:
+      path: Snapsol/Info.plist
+      properties:
+        CFBundleDisplayName: Snapsol
+        LSUIElement: true
+        NSScreenCaptureUsageDescription: スクリーンショットを撮影するために画面収録の権限が必要です。
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.solmomma.snapsol
+        ENABLE_HARDENED_RUNTIME: true
+        ENABLE_APP_SANDBOX: false
