@@ -9,6 +9,10 @@ final class AppContainer {
     private let paths = AppPaths.standard()
     private let thumbnails = ThumbnailLoader()
     private let history: HistoryService
+    private let hotkeys = HotkeyBindingService(
+        registrar: CarbonHotkeyRegistrar(),
+        store: UserDefaultsHotkeyStore(defaults: .standard)
+    )
     private var captureFlow: CaptureFlow!
     private var statusItem: StatusItemController!
 
@@ -32,8 +36,20 @@ final class AppContainer {
             )
         )
 
+        hotkeys.onAction = { [weak self] action in self?.perform(action) }
+        hotkeys.start()
+
         Task {
             do { try await history.reload() } catch { logger.error("履歴の読み込みに失敗: \(error)") }
+        }
+    }
+
+    private func perform(_ action: HotkeyAction) {
+        switch action {
+        case .captureFullscreen: capture(.fullscreen)
+        case .captureWindow: capture(.window)
+        case .captureArea: capture(.area)
+        case .captureText: break // TODO(ステップ4): OCR
         }
     }
 
