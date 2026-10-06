@@ -17,6 +17,7 @@ final class AppContainer: CaptureResultPresenting {
         registrar: CarbonHotkeyRegistrar(),
         store: UserDefaultsHotkeyStore(defaults: .standard)
     )
+    private let windows = WindowPresenter(activation: ActivationPolicyController())
     private var captureFlow: CaptureFlow!
     private var textCaptureFlow: TextCaptureFlow!
     private var preview: PreviewPanelController!
@@ -54,12 +55,16 @@ final class AppContainer: CaptureResultPresenting {
         )
         statusItem = StatusItemController(
             history: history,
+            hotkeys: hotkeys,
             thumbnails: thumbnails,
             actions: .init(
                 perform: { [weak self] action in self?.perform(action) },
-                selectRecent: { [weak self] entry in self?.copy(entry) }
+                selectRecent: { [weak self] entry in self?.copy(entry) },
+                showHistory: { [weak self] in self?.showHistory() },
+                showSettings: { [weak self] in self?.showSettings() }
             )
         )
+        MainMenuInstaller.install { [weak self] in self?.showSettings() }
 
         hotkeys.onAction = { [weak self] action in self?.perform(action) }
         hotkeys.start()
@@ -115,6 +120,32 @@ final class AppContainer: CaptureResultPresenting {
         } catch {
             logger.error("保存に失敗: \(error)")
             toast.show("保存に失敗しました", detail: error.localizedDescription)
+        }
+    }
+
+    private func reveal(_ entry: HistoryEntry) {
+        NSWorkspace.shared.activateFileViewerSelecting([history.fileURL(for: entry)])
+    }
+
+    private func showHistory() {
+        windows.show(id: "history", title: "撮影履歴", size: NSSize(width: 760, height: 520)) {
+            HistoryGridView(
+                history: history,
+                thumbnails: thumbnails,
+                actions: .init(
+                    copy: { [weak self] in self?.copy($0) },
+                    save: { [weak self] in self?.save($0) },
+                    annotate: { [weak self] in self?.openEditor(for: $0) },
+                    reveal: { [weak self] in self?.reveal($0) },
+                    delete: { [weak self] in self?.delete($0) }
+                )
+            )
+        }
+    }
+
+    private func showSettings() {
+        windows.show(id: "settings", title: "Snapsol の設定", size: NSSize(width: 520, height: 480)) {
+            SettingsView(settings: settings, hotkeys: hotkeys)
         }
     }
 
