@@ -6,26 +6,44 @@ import os
 @MainActor
 final class AppContainer {
     private let logger = Logger(subsystem: "com.solmomma.snapsol", category: "App")
-    private let capturer: any ScreenCapturing = ScreencaptureService(
-        runner: ProcessRunner(),
-        temporaryDirectory: FileManager.default.temporaryDirectory,
-        displayIndex: { DisplayResolver.indexOfDisplayUnderCursor() }
-    )
-    private var statusItem: StatusItemController?
+    private let paths = AppPaths.standard()
+    private let thumbnails = ThumbnailLoader()
+    private let history: HistoryService
+    private var captureFlow: CaptureFlow!
+    private var statusItem: StatusItemController!
 
     init() {
-        statusItem = StatusItemController { [weak self] mode in self?.capture(mode) }
+        history = HistoryService(repository: FileHistoryRepository(
+            historyDirectory: paths.historyDirectory,
+            indexFile: paths.historyIndexFile
+        ))
+        let capturer = ScreencaptureService(
+            runner: ProcessRunner(),
+            temporaryDirectory: FileManager.default.temporaryDirectory,
+            displayIndex: { DisplayResolver.indexOfDisplayUnderCursor() }
+        )
+        captureFlow = CaptureFlow(capturer: capturer, history: history) { _ in }
+        statusItem = StatusItemController(
+            history: history,
+            thumbnails: thumbnails,
+            actions: .init(
+                capture: { [weak self] mode in self?.capture(mode) },
+                selectRecent: { [weak self] entry in self?.revealInFinder(entry) }
+            )
+        )
+
+        Task {
+            do { try await history.reload() } catch { logger.error("履歴の読み込みに失敗: \(error)") }
+        }
     }
 
-    // TODO(ステップ2): CaptureFlow（履歴への取り込み）に置き換える。今は撮影結果をプレビュー.appで開くだけ
     private func capture(_ mode: CaptureMode) {
         Task {
-            do {
-                guard let url = try await capturer.capture(mode) else { return }
-                NSWorkspace.shared.open(url)
-            } catch {
-                logger.error("撮影に失敗: \(error)")
-            }
+            do { try await captureFlow.run(mode) } catch { logger.error("撮影に失敗: \(error)") }
         }
+    }
+
+    private func revealInFinder(_ entry: HistoryEntry) {
+        NSWorkspace.shared.activateFileViewerSelecting([history.fileURL(for: entry)])
     }
 }
