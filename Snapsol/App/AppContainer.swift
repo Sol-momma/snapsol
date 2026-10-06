@@ -11,6 +11,7 @@ final class AppContainer: CaptureResultPresenting {
     private let thumbnails = ThumbnailLoader()
     private let clipboard = PasteboardClipboard()
     private let toast = ToastPresenter()
+    private let renderer = CoreGraphicsAnnotationRenderer()
     private let exporter: PicturesExporter
     private let history: HistoryService
     private let hotkeys = HotkeyBindingService(
@@ -81,7 +82,105 @@ final class AppContainer: CaptureResultPresenting {
     }
 
     func openEditor(for entry: HistoryEntry) {
-        logger.info("TODO(ステップ8): 注釈エディタを開く \(entry.fileName)")
+        let url = history.fileURL(for: entry)
+        guard let image = renderer.loadImage(at: url) else {
+            toast.show("画像を開けませんでした", detail: entry.fileName)
+            return
+        }
+        let session = EditorSession(imageSize: CGSize(width: image.width, height: image.height))
+        let windowID = "editor-\(entry.id)"
+
+        windows.show(
+            id: windowID,
+            title: "注釈 — \(entry.fileName)",
+            size: editorWindowSize(for: image),
+            shouldClose: { [weak self] in self?.confirmClose(session, entry: entry, windowID: windowID) ?? true }
+        ) {
+            EditorView(
+                session: session,
+                baseImage: image,
+                mosaicSource: renderer.mosaicSource(for: image),
+                renderer: renderer,
+                onCopy: { [weak self] in self?.copyAnnotated(session, entry: entry) },
+                onSave: { [weak self] in self?.saveAnnotated(session, entry: entry, windowID: windowID) }
+            )
+        }
+    }
+
+    // MARK: - Editor
+
+    /// 画像を等倍（Retina は 2px = 1pt）で収まる大きさにし、画面に収まらなければ縮める
+    private func editorWindowSize(for image: CGImage) -> NSSize {
+        let scale = NSScreen.main?.backingScaleFactor ?? 2
+        let limit = (NSScreen.main?.visibleFrame.size ?? NSSize(width: 1200, height: 800)).applying(.init(scaleX: 0.85, y: 0.85))
+        let toolbarHeight: CGFloat = 52, padding: CGFloat = 32
+        let natural = NSSize(width: CGFloat(image.width) / scale + padding, height: CGFloat(image.height) / scale + padding)
+        let fit = min(1, limit.width / natural.width, (limit.height - toolbarHeight) / natural.height)
+        return NSSize(width: max(640, natural.width * fit), height: max(420, natural.height * fit + toolbarHeight))
+    }
+
+    private func saveAnnotated(_ session: EditorSession, entry: HistoryEntry, windowID: String) {
+        let url = history.fileURL(for: entry)
+        let annotations = session.annotations
+        let renderer = renderer
+        Task {
+            do {
+                // フル解像度の描画は重いのでメインスレッドの外で行う
+                let data = try await Task.detached { try renderer.renderPNG(baseImageAt: url, annotations: annotations) }.value
+                _ = try await history.replaceImage(of: entry, with: data)
+                session.markSaved()
+                windows.close(id: windowID)
+                toast.show("注釈を保存しました", detail: nil)
+            } catch {
+                logger.error("注釈の保存に失敗: \(error)")
+                toast.show("保存に失敗しました", detail: error.localizedDescription)
+            }
+        }
+    }
+
+    /// 保存せずに、注釈を焼き込んだ画像をクリップボードへ
+    private func copyAnnotated(_ session: EditorSession, entry: HistoryEntry) {
+        let source = history.fileURL(for: entry)
+        guard !session.annotations.isEmpty else {
+            copy(entry)
+            return
+        }
+        let annotations = session.annotations
+        let renderer = renderer
+        Task {
+            do {
+                let data = try await Task.detached { try renderer.renderPNG(baseImageAt: source, annotations: annotations) }.value
+                // 貼り付け先にファイル名が見えるので、元と同じ名前で一時フォルダに置く
+                let directory = FileManager.default.temporaryDirectory.appending(path: "Snapsol-\(UUID().uuidString)", directoryHint: .isDirectory)
+                try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
+                let file = directory.appending(path: entry.fileName)
+                try data.write(to: file)
+                try clipboard.copyImage(at: file)
+                toast.show("注釈付きの画像をコピーしました", detail: nil)
+            } catch {
+                logger.error("コピーに失敗: \(error)")
+            }
+        }
+    }
+
+    /// 未保存の注釈があれば確認する。false を返すとウィンドウは閉じない
+    private func confirmClose(_ session: EditorSession, entry: HistoryEntry, windowID: String) -> Bool {
+        guard session.hasUnsavedChanges else { return true }
+        let alert = NSAlert()
+        alert.messageText = "注釈を保存しますか？"
+        alert.informativeText = "保存すると、元の画像に注釈が焼き込まれます。"
+        alert.addButton(withTitle: "保存")
+        alert.addButton(withTitle: "キャンセル")
+        alert.addButton(withTitle: "保存しない")
+        switch alert.runModal() {
+        case .alertFirstButtonReturn:
+            saveAnnotated(session, entry: entry, windowID: windowID) // 保存が終わったら閉じる
+            return false
+        case .alertThirdButtonReturn:
+            return true
+        default:
+            return false
+        }
     }
 
     // MARK: - Actions
