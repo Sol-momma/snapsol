@@ -4,12 +4,14 @@ import os
 /// 依存関係を組み立てる唯一の場所。
 /// 各層の具体型（Infrastructure）をここで生成し、Application / Presentation に注入する。
 @MainActor
-final class AppContainer {
+final class AppContainer: CaptureResultPresenting {
     private let logger = Logger(subsystem: "com.solmomma.snapsol", category: "App")
     private let paths = AppPaths.standard()
+    private let settings = AppSettings(defaults: .standard)
     private let thumbnails = ThumbnailLoader()
     private let clipboard = PasteboardClipboard()
     private let toast = ToastPresenter()
+    private let exporter: PicturesExporter
     private let history: HistoryService
     private let hotkeys = HotkeyBindingService(
         registrar: CarbonHotkeyRegistrar(),
@@ -17,9 +19,11 @@ final class AppContainer {
     )
     private var captureFlow: CaptureFlow!
     private var textCaptureFlow: TextCaptureFlow!
+    private var preview: PreviewPanelController!
     private var statusItem: StatusItemController!
 
     init() {
+        exporter = PicturesExporter(directory: paths.exportDirectory)
         history = HistoryService(repository: FileHistoryRepository(
             historyDirectory: paths.historyDirectory,
             indexFile: paths.historyIndexFile
@@ -30,12 +34,23 @@ final class AppContainer {
             temporaryDirectory: FileManager.default.temporaryDirectory,
             displayIndex: { DisplayResolver.indexOfDisplayUnderCursor() }
         ))
-        captureFlow = CaptureFlow(capturer: capturer, history: history) { _ in }
+        captureFlow = CaptureFlow(capturer: capturer, history: history, settings: settings, clipboard: clipboard, presenter: self)
         textCaptureFlow = TextCaptureFlow(
             capturer: capturer,
             recognizer: VisionTextRecognizer(),
             clipboard: clipboard,
             toast: toast
+        )
+        preview = PreviewPanelController(
+            history: history,
+            thumbnails: thumbnails,
+            settings: settings,
+            actions: .init(
+                copy: { [weak self] entry in self?.copy(entry) },
+                save: { [weak self] entry in self?.save(entry) },
+                annotate: { [weak self] entry in self?.openEditor(for: entry) },
+                delete: { [weak self] entry in self?.delete(entry) }
+            )
         )
         statusItem = StatusItemController(
             history: history,
@@ -53,6 +68,18 @@ final class AppContainer {
             do { try await history.reload() } catch { logger.error("履歴の読み込みに失敗: \(error)") }
         }
     }
+
+    // MARK: - CaptureResultPresenting
+
+    func showCard(for entry: HistoryEntry) {
+        preview.show(entry)
+    }
+
+    func openEditor(for entry: HistoryEntry) {
+        logger.info("TODO(ステップ8): 注釈エディタを開く \(entry.fileName)")
+    }
+
+    // MARK: - Actions
 
     private func perform(_ action: HotkeyAction) {
         switch action {
@@ -78,6 +105,23 @@ final class AppContainer {
             toast.show("画像をコピーしました", detail: nil)
         } catch {
             logger.error("コピーに失敗: \(error)")
+        }
+    }
+
+    private func save(_ entry: HistoryEntry) {
+        do {
+            let url = try exporter.export(history.fileURL(for: entry))
+            toast.show("保存しました", detail: url.path(percentEncoded: false))
+        } catch {
+            logger.error("保存に失敗: \(error)")
+            toast.show("保存に失敗しました", detail: error.localizedDescription)
+        }
+    }
+
+    private func delete(_ entry: HistoryEntry) {
+        preview.dismiss(entry.id)
+        Task {
+            do { try await history.delete(entry) } catch { logger.error("削除に失敗: \(error)") }
         }
     }
 }

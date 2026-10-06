@@ -12,6 +12,11 @@ protocol HistoryRepository: Sendable {
     nonisolated func fileURL(for entry: HistoryEntry) -> URL
 }
 
+protocol ImageExporting: Sendable {
+    /// 書き出し先フォルダへコピーし、書き出したファイルの URL を返す
+    func export(_ source: URL) throws -> URL
+}
+
 protocol ThumbnailProviding: Sendable {
     /// `version` が変わるとキャッシュを使わず読み直す
     func thumbnail(at url: URL, version: Date, maxPixelSize: Int) -> CGImage?
