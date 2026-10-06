@@ -5,7 +5,7 @@ import AppKit
 @MainActor
 final class StatusItemController: NSObject, NSMenuDelegate {
     struct Actions {
-        var capture: (CaptureMode) -> Void
+        var perform: (HotkeyAction) -> Void
         var selectRecent: (HistoryEntry) -> Void
     }
 
@@ -27,10 +27,10 @@ final class StatusItemController: NSObject, NSMenuDelegate {
 
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
-        for mode in CaptureMode.allCases {
-            let item = NSMenuItem(title: mode.menuTitle, action: #selector(captureSelected(_:)), keyEquivalent: "")
+        for action in HotkeyAction.allCases {
+            let item = NSMenuItem(title: action.menuTitle, action: #selector(actionSelected(_:)), keyEquivalent: "")
             item.target = self
-            item.representedObject = mode
+            item.representedObject = action
             menu.addItem(item)
         }
 
@@ -69,9 +69,9 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         return item
     }
 
-    @objc private func captureSelected(_ sender: NSMenuItem) {
-        guard let mode = sender.representedObject as? CaptureMode else { return }
-        actions.capture(mode)
+    @objc private func actionSelected(_ sender: NSMenuItem) {
+        guard let action = sender.representedObject as? HotkeyAction else { return }
+        actions.perform(action)
     }
 
     @objc private func recentSelected(_ sender: NSMenuItem) {
@@ -80,12 +80,13 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     }
 }
 
-private extension CaptureMode {
+extension HotkeyAction {
     var menuTitle: String {
         switch self {
-        case .fullscreen: "全画面を撮影"
-        case .window: "ウィンドウを撮影"
-        case .area: "範囲を撮影"
+        case .captureFullscreen: "全画面を撮影"
+        case .captureWindow: "ウィンドウを撮影"
+        case .captureArea: "範囲を撮影"
+        case .captureText: "範囲の文字をコピー"
         }
     }
 }
