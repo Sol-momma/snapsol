@@ -9,6 +9,8 @@ final class StatusItemController: NSObject, NSMenuDelegate {
         var selectRecent: (HistoryEntry) -> Void
         var showHistory: () -> Void
         var showSettings: () -> Void
+        var isScreenCaptureGranted: () -> Bool
+        var openScreenCaptureSettings: () -> Void
     }
 
     private let statusItem = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
@@ -35,6 +37,12 @@ final class StatusItemController: NSObject, NSMenuDelegate {
     func menuNeedsUpdate(_ menu: NSMenu) {
         menu.removeAllItems()
         closureTargets.removeAll()
+        if !actions.isScreenCaptureGranted() {
+            let warning = closureItem("⚠︎ 画面収録の許可が必要です…", actions.openScreenCaptureSettings)
+            warning.toolTip = "システム設定で Snapsol を許可したあと、Snapsol を再起動してください"
+            menu.addItem(warning)
+            menu.addItem(.separator())
+        }
         for action in HotkeyAction.allCases {
             let item = NSMenuItem(title: action.menuTitle, action: #selector(actionSelected(_:)), keyEquivalent: "")
             item.target = self

@@ -62,9 +62,14 @@ final class AppContainer: CaptureResultPresenting {
                 perform: { [weak self] action in self?.perform(action) },
                 selectRecent: { [weak self] entry in self?.copy(entry) },
                 showHistory: { [weak self] in self?.showHistory() },
-                showSettings: { [weak self] in self?.showSettings() }
+                showSettings: { [weak self] in self?.showSettings() },
+                isScreenCaptureGranted: { ScreenCapturePermission.isGranted },
+                openScreenCaptureSettings: { ScreenCapturePermission.openSystemSettings() }
             )
         )
+        if !ScreenCapturePermission.isGranted {
+            ScreenCapturePermission.request()
+        }
         MainMenuInstaller.install { [weak self] in self?.showSettings() }
 
         hotkeys.onAction = { [weak self] action in self?.perform(action) }
