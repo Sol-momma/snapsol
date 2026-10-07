@@ -1,30 +1,38 @@
-# Snapsol
+<p align="center">
+  <img src="docs/icon.png" alt="Snapsol" width="128">
+</p>
 
-自分専用の macOS スクリーンショットアプリ。メニューバーに常駐し、撮ってすぐ共有・注釈・文字の読み取りができる。
-[Screendrop](https://github.com/fayazara/screendrop)（CC0）を参考に、最小構成でゼロから作り直したもの。
+<h1 align="center">Snapsol</h1>
 
-## 機能
+<p align="center">
+  English · <a href="README.ja.md">日本語</a>
+</p>
 
-| 操作 | 既定のキー |
+A personal macOS screenshot app that lives in the menu bar. Capture, share instantly, annotate, and grab text from the screen.
+Built from scratch as a minimal take on [Screendrop](https://github.com/fayazara/screendrop) (CC0).
+
+## Features
+
+| Action | Default shortcut |
 | --- | --- |
-| 全画面を撮影（カーソルのあるディスプレイ） | ⌥1 |
-| ウィンドウを撮影 | ⌥2 |
-| 範囲を撮影 | ⌥3 |
-| 範囲の文字をコピー（OCR、日本語・英語） | ⌥4 |
+| Capture full screen (the display under the cursor) | ⌥1 |
+| Capture a window | ⌥2 |
+| Capture an area | ⌥3 |
+| Copy text from an area (OCR, Japanese and English) | ⌥4 |
 
-- 撮影後、右下にプレビューカードが積まれる。コピー・保存・注釈・削除・他アプリへのドラッグができる。ホバー中は自動で閉じない
-- 注釈エディタ: 矩形・矢印・テキスト・モザイク、選択/移動/リサイズ、取り消し。保存すると画像に焼き込まれる
-- 撮影履歴: メニューバーに直近 5 件（クリックでコピー）、一覧ウィンドウ
-- 設定: ホットキーの変更、撮影後の動作（カード表示 / 自動コピー / エディタを開く）、カードを閉じるまでの秒数
+- **Preview cards**: new captures stack up in the bottom-right corner. Copy, save, annotate, delete, or drag them into other apps. Cards stay open while you hover over them.
+- **Annotation editor**: rectangles, arrows, text, and mosaic, with select / move / resize and undo. Saving burns the annotations into the image.
+- **History**: the 5 most recent captures in the menu bar (click to copy), plus a grid window of everything.
+- **Settings**: rebind shortcuts, choose what happens after a capture (show card / copy to clipboard / open editor), and set how long cards stay open.
 
-保存場所:
+Where files go:
 
-- 撮影履歴: `~/Library/Application Support/Snapsol/`（`History/` と `history.json`）
-- 「保存」の書き出し先: `~/Pictures/Snapsol/`
+- Capture history: `~/Library/Application Support/Snapsol/` (`History/` and `history.json`)
+- "Save" exports to: `~/Pictures/Snapsol/`
 
-## ビルド
+## Build
 
-必要なもの: macOS 26 以降、Xcode 27、[XcodeGen](https://github.com/yonaskolb/XcodeGen)
+Requirements: macOS 26 or later, Xcode 27, [XcodeGen](https://github.com/yonaskolb/XcodeGen)
 
 ```sh
 xcodegen generate
@@ -32,29 +40,29 @@ xcodebuild -project Snapsol.xcodeproj -scheme Snapsol -derivedDataPath build bui
 open build/Build/Products/Debug/Snapsol.app
 ```
 
-テスト:
+Tests:
 
 ```sh
 xcodebuild -project Snapsol.xcodeproj -scheme Snapsol -derivedDataPath build test
 ```
 
-アプリアイコンは `Resources/Snapsol.icon`（Icon Composer で開いて編集できる）。ビルド時に actool が `Assets.car` へコンパイルする。
+The app icon lives in `Resources/Snapsol.icon` and can be edited in Icon Composer. actool compiles it into `Assets.car` at build time.
 
-初回起動時に「画面収録」の許可を求められる。システム設定で許可したあと、アプリを再起動する。
-Team ID 付きで署名しているので、再ビルドしても許可は外れない。
+On first launch, macOS asks for Screen Recording permission. Grant it in System Settings, then relaunch the app.
+Because the app is signed with a Team ID, the permission survives rebuilds.
 
-## 構成
+## Architecture
 
 ```
 Snapsol/
-├─ App/             AppDelegate と AppContainer（依存を組み立てる唯一の場所）
-├─ Domain/          値型と純粋なロジック（注釈・ホットキー・履歴・読み順・カードの状態機械）
-├─ Application/     ユースケースと状態（撮影フロー・履歴・ホットキー・エディタ）と Ports（protocol）
-├─ Infrastructure/  Ports の実装（screencapture・Carbon・Vision・ファイル・描画）
-└─ Presentation/    AppKit / SwiftUI の UI
+├─ App/             AppDelegate and AppContainer (the only place that wires dependencies)
+├─ Domain/          Value types and pure logic (annotations, hotkeys, history, reading order, card state machine)
+├─ Application/     Use cases and state (capture flow, history, hotkeys, editor) plus Ports (protocols)
+├─ Infrastructure/  Port implementations (screencapture, Carbon, Vision, files, rendering)
+└─ Presentation/    AppKit / SwiftUI UI
 ```
 
-依存の向きは次のとおり。Infrastructure は Application が定義する Ports（protocol）を実装する。
+Dependencies point this way. Infrastructure implements the Ports defined by Application.
 
 ```
 Presentation ─→ Application ─→ Domain
@@ -62,6 +70,6 @@ Presentation ─→ Application ─→ Domain
              Infrastructure
 ```
 
-テストターゲットは App と Presentation を含めずにコンパイルするので、Domain / Application / Infrastructure が
-Presentation や App の型を参照するとテストのビルドが失敗する。
-ただし `import AppKit` などのフレームワーク利用はコンパイラでは検出されないので、レビューで守る。
+The test target compiles without App and Presentation, so if Domain / Application / Infrastructure references a type
+from Presentation or App, the test build fails.
+Framework imports such as `import AppKit` are not caught by the compiler, so that part is kept in check by review.
