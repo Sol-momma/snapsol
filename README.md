@@ -38,6 +38,8 @@ open build/Build/Products/Debug/Snapsol.app
 xcodebuild -project Snapsol.xcodeproj -scheme Snapsol -derivedDataPath build test
 ```
 
+アプリアイコンは `Resources/Snapsol.icon`（Icon Composer で開いて編集できる）。ビルド時に actool が `Assets.car` へコンパイルする。
+
 初回起動時に「画面収録」の許可を求められる。システム設定で許可したあと、アプリを再起動する。
 Team ID 付きで署名しているので、再ビルドしても許可は外れない。
 
