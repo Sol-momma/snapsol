@@ -28,8 +28,7 @@ final class ToastPresenter: ToastPresenting {
         panel.sharingType = .none
         panel.contentView = host
 
-        let screen = NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } ?? NSScreen.main
-        if let frame = screen?.visibleFrame {
+        if let frame = NSScreen.underCursor?.visibleFrame {
             panel.setFrameOrigin(NSPoint(x: frame.midX - size.width / 2, y: frame.minY + 96))
         }
         panel.alphaValue = 0

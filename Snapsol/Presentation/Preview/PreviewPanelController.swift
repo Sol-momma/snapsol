@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 
 enum PreviewCardAction {
-    case copy, save, annotate, delete, close, dragEnded
+    case copy, save, annotate, delete, close
 }
 
 /// 撮影後カードを画面右下に積むパネル。状態は `PreviewStackState` に任せ、ここはタイマーとウィンドウの面倒を見る。
@@ -43,7 +43,7 @@ final class PreviewPanelController {
 
     func show(_ entry: HistoryEntry) {
         if state.cards.isEmpty {
-            screen = NSScreen.screens.first { NSMouseInRect(NSEvent.mouseLocation, $0.frame, false) } ?? NSScreen.main
+            screen = NSScreen.underCursor
         }
         state.push(entry.id, now: .now, lifetime: settings.cardLifetime > 0 ? settings.cardLifetime : nil)
         stateDidChange()
@@ -72,7 +72,7 @@ final class PreviewPanelController {
         case .delete:
             actions.delete(entry)
             dismiss(entry.id)
-        case .close, .dragEnded:
+        case .close:
             dismiss(entry.id)
         }
     }

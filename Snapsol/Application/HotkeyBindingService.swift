@@ -33,7 +33,7 @@ final class HotkeyBindingService {
         for action in HotkeyAction.allCases {
             bindings[action] = saved[action] ?? action.defaultShortcut
         }
-        registerAll()
+        registerUnregistered()
     }
 
     /// 新キーの登録 → 保存 → 旧キーの解除 の順に行う。
@@ -74,22 +74,23 @@ final class HotkeyBindingService {
         bindings.first { $0.key != action && $0.value == shortcut }?.key
     }
 
-    /// キー録音中は一時的に全解除する。そうしないと録音しようとしたキーで撮影が始まってしまう
+    /// キー録音中は一時的に全解除する。そうしないと録音しようとしたキーで撮影が始まってしまう。
+    /// 録音中に rebind されたアクションは登録済みなので、再開時は未登録のものだけを登録し直す
     func setSuspended(_ suspended: Bool) {
         if suspended {
             registrations.values.forEach(registrar.unregister)
             registrations.removeAll()
-        } else if registrations.isEmpty {
-            registerAll()
+        } else {
+            registerUnregistered()
         }
     }
 
-    private func registerAll() {
-        failedActions.removeAll()
-        for action in HotkeyAction.allCases {
+    private func registerUnregistered() {
+        for action in HotkeyAction.allCases where registrations[action] == nil {
             guard let shortcut = bindings[action] else { continue }
             do {
                 registrations[action] = try registrar.register(shortcut)
+                failedActions.remove(action)
             } catch {
                 failedActions.insert(action)
             }

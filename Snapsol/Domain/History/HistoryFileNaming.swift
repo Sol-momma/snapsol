@@ -8,12 +8,17 @@ enum HistoryFileNaming {
         formatter.locale = Locale(identifier: "en_US_POSIX")
         formatter.timeZone = timeZone
         formatter.dateFormat = "yyyy-MM-dd HH.mm.ss"
-        let base = "Snapsol \(formatter.string(from: date))"
+        return uniqueName("Snapsol \(formatter.string(from: date)).png") { existing.contains($0) }
+    }
 
-        var candidate = "\(base).png"
+    /// `fileName` が使用済みなら、拡張子の前に " 2", " 3" … を付けて空いている名前を返す
+    static func uniqueName(_ fileName: String, isTaken: (String) -> Bool) -> String {
+        let base = (fileName as NSString).deletingPathExtension
+        let ext = (fileName as NSString).pathExtension
+        var candidate = fileName
         var counter = 2
-        while existing.contains(candidate) {
-            candidate = "\(base) \(counter).png"
+        while isTaken(candidate) {
+            candidate = ext.isEmpty ? "\(base) \(counter)" : "\(base) \(counter).\(ext)"
             counter += 1
         }
         return candidate

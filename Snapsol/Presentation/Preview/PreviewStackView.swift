@@ -31,7 +31,8 @@ private struct PreviewCardView: View {
     var body: some View {
         ZStack {
             thumbnail
-            FileDragSource(url: url, image: image) { onAction(.dragEnded) }
+            // 他アプリへ渡し終えたらカードの役目は終わりなので閉じる
+            FileDragSource(url: url, image: image) { onAction(.close) }
             if isHovering {
                 // 暗幕はクリックを素通しにして、下のドラッグ元に届くようにする
                 Color.black.opacity(0.35).allowsHitTesting(false)

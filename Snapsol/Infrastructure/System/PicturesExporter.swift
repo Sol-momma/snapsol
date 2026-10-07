@@ -6,20 +6,11 @@ struct PicturesExporter: ImageExporting {
 
     func export(_ source: URL) throws -> URL {
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
-        let destination = uniqueURL(for: source.lastPathComponent)
+        let name = HistoryFileNaming.uniqueName(source.lastPathComponent) {
+            FileManager.default.fileExists(atPath: directory.appending(path: $0).path)
+        }
+        let destination = directory.appending(path: name)
         try FileManager.default.copyItem(at: source, to: destination)
         return destination
-    }
-
-    private func uniqueURL(for fileName: String) -> URL {
-        let base = (fileName as NSString).deletingPathExtension
-        let ext = (fileName as NSString).pathExtension
-        var candidate = directory.appending(path: fileName)
-        var counter = 2
-        while FileManager.default.fileExists(atPath: candidate.path) {
-            candidate = directory.appending(path: "\(base) \(counter).\(ext)")
-            counter += 1
-        }
-        return candidate
     }
 }

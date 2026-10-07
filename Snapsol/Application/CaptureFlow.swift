@@ -29,14 +29,15 @@ final class CaptureFlow {
         let entry = try await history.add(movingFrom: url)
 
         let actions = settings.afterCapture
-        if actions.contains(.copyToClipboard) {
-            try clipboard.copyImage(at: history.fileURL(for: entry))
-        }
         if actions.contains(.showCard) {
             presenter?.showCard(for: entry)
         }
         if actions.contains(.openEditor) {
             presenter?.openEditor(for: entry)
+        }
+        // 失敗しうるコピーは最後に行う。失敗してもカードやエディタは出ている（撮影結果を見失わない）
+        if actions.contains(.copyToClipboard) {
+            try clipboard.copyImage(at: history.fileURL(for: entry))
         }
     }
 }

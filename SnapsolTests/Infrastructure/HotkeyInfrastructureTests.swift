@@ -16,10 +16,8 @@ struct HotkeyInfrastructureTests {
     }
 
     @Test func ストアはデフォルトと異なるキーだけを保存して読み戻す() throws {
-        let suite = "SnapsolTests-\(UUID().uuidString)"
-        let defaults = try #require(UserDefaults(suiteName: suite))
-        defer { defaults.removePersistentDomain(forName: suite) }
-        let store = UserDefaultsHotkeyStore(defaults: defaults)
+        let temporary = try TemporaryDefaults()
+        let store = UserDefaultsHotkeyStore(defaults: temporary.defaults)
         let custom = HotkeyShortcut(keyCode: 23, modifiers: [.command, .shift])
 
         try store.save([.captureArea: custom, .captureWindow: HotkeyAction.captureWindow.defaultShortcut])

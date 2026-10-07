@@ -124,14 +124,18 @@ final class AppContainer: CaptureResultPresenting {
         return NSSize(width: max(640, natural.width * fit), height: max(420, natural.height * fit + toolbarHeight))
     }
 
-    private func saveAnnotated(_ session: EditorSession, entry: HistoryEntry, windowID: String) {
+    /// 元画像に注釈を焼き込んだ PNG。フル解像度の描画は重いのでメインスレッドの外で行う
+    private func renderAnnotated(_ session: EditorSession, entry: HistoryEntry) async throws -> Data {
         let url = history.fileURL(for: entry)
         let annotations = session.annotations
         let renderer = renderer
+        return try await Task.detached { try renderer.renderPNG(baseImageAt: url, annotations: annotations) }.value
+    }
+
+    private func saveAnnotated(_ session: EditorSession, entry: HistoryEntry, windowID: String) {
         Task {
             do {
-                // フル解像度の描画は重いのでメインスレッドの外で行う
-                let data = try await Task.detached { try renderer.renderPNG(baseImageAt: url, annotations: annotations) }.value
+                let data = try await renderAnnotated(session, entry: entry)
                 _ = try await history.replaceImage(of: entry, with: data)
                 session.markSaved()
                 windows.close(id: windowID)
@@ -145,16 +149,13 @@ final class AppContainer: CaptureResultPresenting {
 
     /// 保存せずに、注釈を焼き込んだ画像をクリップボードへ
     private func copyAnnotated(_ session: EditorSession, entry: HistoryEntry) {
-        let source = history.fileURL(for: entry)
         guard !session.annotations.isEmpty else {
             copy(entry)
             return
         }
-        let annotations = session.annotations
-        let renderer = renderer
         Task {
             do {
-                let data = try await Task.detached { try renderer.renderPNG(baseImageAt: source, annotations: annotations) }.value
+                let data = try await renderAnnotated(session, entry: entry)
                 // 貼り付け先にファイル名が見えるので、元と同じ名前で一時フォルダに置く
                 let directory = FileManager.default.temporaryDirectory.appending(path: "Snapsol-\(UUID().uuidString)", directoryHint: .isDirectory)
                 try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)

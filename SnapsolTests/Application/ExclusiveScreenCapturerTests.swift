@@ -24,7 +24,7 @@ struct ExclusiveScreenCapturerTests {
         let exclusive = ExclusiveScreenCapturer(gated)
 
         let first = Task { try await exclusive.capture(.area) }
-        while await gated.calls == 0 { await Task.yield() }
+        try await waitUntil { await gated.calls == 1 }
 
         #expect(try await exclusive.capture(.window) == nil)
         #expect(await gated.calls == 1)
@@ -38,12 +38,12 @@ struct ExclusiveScreenCapturerTests {
         let exclusive = ExclusiveScreenCapturer(gated)
 
         let first = Task { try await exclusive.capture(.area) }
-        while await gated.calls == 0 { await Task.yield() }
+        try await waitUntil { await gated.calls == 1 }
         await gated.release()
         _ = try await first.value
 
         let second = Task { try await exclusive.capture(.area) }
-        while await gated.calls == 1 { await Task.yield() }
+        try await waitUntil { await gated.calls == 2 }
         await gated.release()
         #expect(try await second.value != nil)
     }

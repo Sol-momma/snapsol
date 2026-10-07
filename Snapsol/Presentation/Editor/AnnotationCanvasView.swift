@@ -236,7 +236,6 @@ final class AnnotationCanvasView: NSView, NSTextViewDelegate {
         self.textView = nil
         textView.delegate = nil
         textView.removeFromSuperview()
-        window?.makeFirstResponder(self)
     }
 
     func textDidChange(_ notification: Notification) {
@@ -254,6 +253,8 @@ final class AnnotationCanvasView: NSView, NSTextViewDelegate {
         if selector == #selector(cancelOperation(_:)) {
             session.cancelText()
             sessionDidChange()
+            // 確定の経路（フォーカス移動の最中）ではフォーカスを奪わない。取り消したときだけキャンバスに戻す
+            window?.makeFirstResponder(self)
             return true
         }
         return false

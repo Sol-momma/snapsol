@@ -21,15 +21,23 @@ private final class SpyPresenter: CaptureResultPresenting {
 
 @MainActor
 private final class SpyClipboard: ClipboardWriting {
+    struct Failed: Error {}
     var images: [URL] = []
-    func copyImage(at url: URL) throws { images.append(url) }
+    var fails = false
+
+    func copyImage(at url: URL) throws {
+        if fails { throw Failed() }
+        images.append(url)
+    }
+
     func copyText(_ text: String) {}
 }
 
 @MainActor
-struct CaptureFlowTests {
+final class CaptureFlowTests {
     private let root: URL
     private let history: HistoryService
+    private let defaults: TemporaryDefaults
     private let settings: AppSettings
     private let presenter = SpyPresenter()
     private let clipboard = SpyClipboard()
@@ -37,7 +45,8 @@ struct CaptureFlowTests {
     init() throws {
         root = try makeTemporaryDirectory()
         history = HistoryService(repository: makeRepository(root: root))
-        settings = AppSettings(defaults: try #require(UserDefaults(suiteName: "SnapsolTests-\(UUID().uuidString)")))
+        defaults = try TemporaryDefaults()
+        settings = AppSettings(defaults: defaults.defaults)
     }
 
     private func flow(cancels: Bool = false) -> CaptureFlow {
@@ -68,6 +77,14 @@ struct CaptureFlowTests {
         #expect(clipboard.images == [history.fileURL(for: entry)])
         #expect(presenter.editors == [entry])
         #expect(presenter.cards.isEmpty)
+    }
+
+    @Test func コピーに失敗してもカードは出る() async throws {
+        settings.afterCapture = [.showCard, .copyToClipboard]
+        clipboard.fails = true
+
+        await #expect(throws: SpyClipboard.Failed.self) { try await self.flow().run(.area) }
+        #expect(presenter.cards.count == 1)
     }
 
     @Test func キャンセルしたら何も起きない() async throws {

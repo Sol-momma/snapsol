@@ -60,7 +60,9 @@ final class WindowPresenter: NSObject, NSWindowDelegate {
     }
 
     func windowShouldClose(_ sender: NSWindow) -> Bool {
-        windows.values.first { $0.window === sender }?.shouldClose?() ?? true
+        // 入力中のテキスト欄を先に確定させる（未確定の文字を「未保存の変更なし」と誤判定しないように）
+        sender.makeFirstResponder(nil)
+        return windows.values.first { $0.window === sender }?.shouldClose?() ?? true
     }
 
     func windowWillClose(_ notification: Notification) {

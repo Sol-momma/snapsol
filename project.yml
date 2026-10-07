@@ -28,7 +28,7 @@ targets:
     scheme:
       testTargets: [SnapsolTests]
   # アプリを起動しない非ホスト型テスト。Presentation / App を含めないことで、
-  # 下位層が UI に依存したらコンパイルエラーになる（層の境界をコンパイラで強制）
+  # 下位層が Presentation / App の型を参照したらコンパイルエラーになる（フレームワークの import は検出できない）
   SnapsolTests:
     type: bundle.unit-test
     platform: macOS

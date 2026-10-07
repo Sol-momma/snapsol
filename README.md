@@ -52,5 +52,14 @@ Snapsol/
 └─ Presentation/    AppKit / SwiftUI の UI
 ```
 
-依存の向きは `Presentation → Application → Domain ← Infrastructure`。
-テストターゲットは App と Presentation を含めずにコンパイルするので、下位の層が UI に依存するとビルドが失敗する。
+依存の向きは次のとおり。Infrastructure は Application が定義する Ports（protocol）を実装する。
+
+```
+Presentation ─→ Application ─→ Domain
+                    ↑
+             Infrastructure
+```
+
+テストターゲットは App と Presentation を含めずにコンパイルするので、Domain / Application / Infrastructure が
+Presentation や App の型を参照するとテストのビルドが失敗する。
+ただし `import AppKit` などのフレームワーク利用はコンパイラでは検出されないので、レビューで守る。

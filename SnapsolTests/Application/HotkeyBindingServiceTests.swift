@@ -145,6 +145,17 @@ struct HotkeyBindingServiceTests {
         #expect(registrar.log.isEmpty)
     }
 
+    @Test func 録音中に変更しても再開後は他のキーも生きている() throws {
+        let service = startedService()
+        service.setSuspended(true)
+        try service.rebind(.captureArea, to: commandShift5)
+        service.setSuspended(false)
+
+        let expected = Set([commandShift5] + [HotkeyAction.captureFullscreen, .captureWindow, .captureText].map(\.defaultShortcut))
+        #expect(Set(registrar.active.values) == expected)
+        #expect(registrar.active.count == HotkeyAction.allCases.count)
+    }
+
     @Test func 一時停止中は全解除し再開で登録し直す() {
         let service = startedService()
         service.setSuspended(true)

@@ -1,3 +1,4 @@
+import AppKit
 import SwiftUI
 
 struct EditorView: View {
@@ -62,14 +63,26 @@ struct EditorView: View {
 
             Spacer()
 
-            Button("コピー", action: onCopy)
-            Button("保存", action: onSave)
-                .buttonStyle(.borderedProminent)
-                .keyboardShortcut("s")
+            Button("コピー") {
+                endTextEditing()
+                onCopy()
+            }
+            Button("保存") {
+                endTextEditing()
+                onSave()
+            }
+            .buttonStyle(.borderedProminent)
+            .keyboardShortcut("s")
         }
         .labelStyle(.iconOnly)
         .padding(.horizontal, 12)
         .padding(.vertical, 8)
+    }
+
+    /// SwiftUI のボタンはクリックしてもフォーカスを奪わないので、入力中のテキストは確定されないまま残る。
+    /// ファーストレスポンダを外して確定させてから保存・コピーする
+    private func endTextEditing() {
+        NSApp.keyWindow?.makeFirstResponder(nil)
     }
 }
 
