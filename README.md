@@ -73,3 +73,7 @@ Presentation ─→ Application ─→ Domain
 The test target compiles without App and Presentation, so if Domain / Application / Infrastructure references a type
 from Presentation or App, the test build fails.
 Framework imports such as `import AppKit` are not caught by the compiler, so that part is kept in check by review.
+
+## License
+
+[MIT](LICENSE)

@@ -73,3 +73,7 @@ Presentation ─→ Application ─→ Domain
 テストターゲットは App と Presentation を含めずにコンパイルするので、Domain / Application / Infrastructure が
 Presentation や App の型を参照するとテストのビルドが失敗する。
 ただし `import AppKit` などのフレームワーク利用はコンパイラでは検出されないので、レビューで守る。
+
+## ライセンス
+
+[MIT](LICENSE)
