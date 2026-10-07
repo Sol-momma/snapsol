@@ -35,7 +35,7 @@ private struct PreviewCardView: View {
             FileDragSource(url: url, image: image) { onAction(.close) }
             if isHovering {
                 // 暗幕はクリックを素通しにして、下のドラッグ元に届くようにする
-                Color.black.opacity(0.35).allowsHitTesting(false)
+                Color.black.opacity(0.5).allowsHitTesting(false)
                 controls
             }
         }
@@ -60,29 +60,39 @@ private struct PreviewCardView: View {
         }
     }
 
+    /// よく使う「コピー」「保存」を中央に大きく置き、それ以外は四隅の丸ボタンにする
     private var controls: some View {
-        VStack {
-            HStack {
-                iconButton("xmark", help: "閉じる", action: .close)
-                Spacer()
-                iconButton("trash", help: "削除", action: .delete)
-            }
-            Spacer()
-            HStack(spacing: 6) {
+        ZStack {
+            VStack(spacing: 8) {
                 textButton("コピー", action: .copy)
                 textButton("保存", action: .save)
-                textButton("注釈", action: .annotate)
             }
+            VStack {
+                HStack {
+                    iconButton("xmark", help: "閉じる", action: .close)
+                    Spacer()
+                    iconButton("trash", help: "削除", action: .delete)
+                }
+                Spacer()
+                HStack {
+                    iconButton("pencil", help: "注釈", action: .annotate)
+                    Spacer()
+                }
+            }
+            .padding(8)
         }
-        .padding(8)
     }
+
+    private static let buttonBackground = Color(white: 0.86)
+    private static let buttonForeground = Color(white: 0.12)
 
     private func iconButton(_ systemName: String, help: String, action: PreviewCardAction) -> some View {
         Button { onAction(action) } label: {
             Image(systemName: systemName)
-                .font(.system(size: 11, weight: .bold))
-                .frame(width: 22, height: 22)
-                .background(.ultraThinMaterial, in: Circle())
+                .font(.system(size: 12, weight: .bold))
+                .foregroundStyle(Self.buttonForeground)
+                .frame(width: 26, height: 26)
+                .background(Self.buttonBackground, in: Circle())
         }
         .buttonStyle(.plain)
         .help(help)
@@ -91,10 +101,11 @@ private struct PreviewCardView: View {
     private func textButton(_ title: String, action: PreviewCardAction) -> some View {
         Button { onAction(action) } label: {
             Text(title)
-                .font(.system(size: 12, weight: .semibold))
-                .padding(.horizontal, 10)
-                .padding(.vertical, 5)
-                .background(.ultraThinMaterial, in: Capsule())
+                .font(.system(size: 14, weight: .semibold))
+                .foregroundStyle(Self.buttonForeground)
+                .padding(.horizontal, 16)
+                .padding(.vertical, 6)
+                .background(Self.buttonBackground, in: Capsule())
         }
         .buttonStyle(.plain)
     }
